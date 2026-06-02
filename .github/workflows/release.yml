@@ -1,0 +1,48 @@
+name: Release
+
+# Push a semver tag (e.g. v1.2.3) to cut a release. This workflow verifies the
+# action, then moves the floating major tag (v1) to that commit so consumers
+# pinned to `human0-ai/code-review@v1` pick up the release automatically.
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      # Never move the major tag onto a commit that doesn't pass.
+      - run: npm run lint
+      - run: npm test
+
+      - name: Move major version tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          MAJOR="${TAG%%.*}"   # v1.2.3 -> v1
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f "$MAJOR" "$TAG"
+          git push origin "refs/tags/$MAJOR" --force
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$TAG" \
+            --generate-notes \
+          || echo "Release for $TAG already exists — skipping."

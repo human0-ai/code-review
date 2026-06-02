@@ -103,6 +103,31 @@ edits needed.
 - Replies on existing review threads and resolves them as they're addressed,
   so the conversation reads like a human back-and-forth.
 
+## Development
+
+The reviewer logic lives in `run.mjs`; its pure helpers (diff scoping, comment
+placement) are in `scope.mjs` and covered by `scope.test.mjs`. No dependencies —
+tests use the Node built-in runner.
+
+```bash
+npm run lint   # syntax check
+npm test       # node --test
+```
+
+CI runs both on every PR.
+
+## Releasing
+
+Push a semver tag and the [release workflow](.github/workflows/release.yml)
+verifies the action and moves the floating major tag for you:
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+`v1` is then re-pointed at that commit, so consumers pinned to `@v1` pick up the
+release automatically. Always pin by major tag (`@v1`), not `@main`.
+
 ## License
 
 Apache 2.0 — see [LICENSE](./LICENSE).
