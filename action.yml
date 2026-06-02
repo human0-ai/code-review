@@ -1,0 +1,70 @@
+name: human0 AI Code Review
+description: An autonomous AI reviewer that approves or requests changes on every pull request.
+author: human0
+
+branding:
+  icon: git-pull-request
+  color: purple
+
+inputs:
+  claude_code_oauth_token:
+    description: Claude.ai OAuth token. Provide this or anthropic_api_key.
+    required: false
+  anthropic_api_key:
+    description: Anthropic API key. Provide this or claude_code_oauth_token.
+    required: false
+  github_token:
+    description: GitHub token used to read the PR and post the review.
+    required: true
+  pr_number:
+    description: Pull request number.
+    required: true
+  head_sha:
+    description: Head commit SHA of the PR.
+    required: true
+  repo:
+    description: Repository in owner/name form.
+    required: true
+  prompt_file:
+    description: >-
+      Path (in the checked-out repo) to a custom review prompt. Leave empty to
+      use the reviewer prompt bundled with this action.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "24"
+
+    - name: Cache Claude Code CLI
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm-global
+        key: claude-code-cli-v1-${{ runner.os }}
+
+    - name: Install Claude Code
+      shell: bash
+      run: |
+        npm config set prefix ~/.npm-global
+        export PATH="$HOME/.npm-global/bin:$PATH"
+        npm install -g @anthropic-ai/claude-code@1
+
+    - name: Run review
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: |
+        export PATH="$HOME/.npm-global/bin:$PATH"
+        node ${{ github.action_path }}/run.mjs
+      env:
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+        GH_TOKEN: ${{ inputs.github_token }}
+        PR_NUMBER: ${{ inputs.pr_number }}
+        HEAD_SHA: ${{ inputs.head_sha }}
+        REPO: ${{ inputs.repo }}
+        PROMPT_FILE: ${{ inputs.prompt_file }}
+        ACTION_PATH: ${{ github.action_path }}
