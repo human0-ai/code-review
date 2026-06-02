@@ -48,7 +48,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
-      - uses: human0-ai/code-review@main
+      - uses: human0-ai/code-review@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ github.token }}
@@ -83,7 +83,7 @@ project-specific rules, change tone — copy [`review-prompt.md`](./review-promp
 into your repo (e.g. `docs/ai-review.md`), edit it, and point the action at it:
 
 ```yaml
-      - uses: human0-ai/code-review@main
+      - uses: human0-ai/code-review@v1
         with:
           # ...
           prompt_file: docs/ai-review.md
