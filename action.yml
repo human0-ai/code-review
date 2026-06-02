@@ -27,10 +27,9 @@ inputs:
     required: true
   prompt_file:
     description: >-
-      Path (in the checked-out repo) to a custom review prompt. Leave empty to
-      use the reviewer prompt bundled with this action.
-    required: false
-    default: ""
+      Path in the checked-out repo to your review prompt (e.g. docs/ai-review.md).
+      Required — the action ships no default prompt; each repo owns its own.
+    required: true
 
 runs:
   using: composite
@@ -67,4 +66,3 @@ runs:
         HEAD_SHA: ${{ inputs.head_sha }}
         REPO: ${{ inputs.repo }}
         PROMPT_FILE: ${{ inputs.prompt_file }}
-        ACTION_PATH: ${{ github.action_path }}

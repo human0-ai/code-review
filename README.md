@@ -19,7 +19,12 @@ For a full repository template wired up to use it, start with
    - `ANTHROPIC_API_KEY` — an [Anthropic API key](https://console.anthropic.com/), or
    - `CLAUDE_CODE_OAUTH_TOKEN` — a Claude.ai OAuth token (`claude setup-token`).
 
-2. **Add the workflow** at `.github/workflows/ai-review.yml`:
+2. **Add your review prompt.** The action ships **no** default prompt — each repo
+   owns its own so it can evolve with the project. Copy
+   [`docs/ai-review.md`](https://github.com/human0-ai/template/blob/main/docs/ai-review.md)
+   from the template into your repo, then review and tailor it before your first run.
+
+3. **Add the workflow** at `.github/workflows/ai-review.yml`:
 
 ```yaml
 name: AI Review
@@ -55,9 +60,10 @@ jobs:
           pr_number: ${{ github.event.pull_request.number }}
           head_sha: ${{ github.event.pull_request.head.sha }}
           repo: ${{ github.repository }}
+          prompt_file: docs/ai-review.md
 ```
 
-3. **Open a PR.** The reviewer runs on the next push and posts its verdict.
+4. **Open a PR.** The reviewer runs on the next push and posts its verdict.
 
 To turn an `APPROVE` into an automatic merge, enable **auto-merge** on the PR and
 require the review in your branch protection rules.
@@ -72,26 +78,20 @@ require the review in your branch protection rules.
 | `repo` | yes | Repository in `owner/name` form. |
 | `anthropic_api_key` | one of | Anthropic API key. |
 | `claude_code_oauth_token` | one of | Claude.ai OAuth token. |
-| `prompt_file` | no | Path in your repo to a custom review prompt. Defaults to the prompt bundled with this action. |
+| `prompt_file` | yes | Path in your repo to your review prompt (e.g. `docs/ai-review.md`). No default — the action requires this. |
 
 Provide **either** `anthropic_api_key` **or** `claude_code_oauth_token`.
 
 ## Customizing the review
 
-The reviewer's behavior is just a prompt. To tune it — adjust the bar, add
-project-specific rules, change tone — copy [`review-prompt.md`](./review-prompt.md)
-into your repo (e.g. `docs/ai-review.md`), edit it, and point the action at it:
+The reviewer's behavior is just the prompt at `prompt_file`. It lives in your
+repo, so tuning it — adjusting the bar, adding project-specific rules, changing
+tone — is a normal edit to that file. Because the reviewer runs against the
+prompt on the PR branch, you can even refine the reviewer in the same PR it
+reviews.
 
-```yaml
-      - uses: human0-ai/code-review@v1
-        with:
-          # ...
-          prompt_file: docs/ai-review.md
-```
-
-The reviewer reads your repo's `AGENTS.md` (or `CLAUDE.md`) on every run, so the
-fastest way to teach it your conventions is to write them there — no prompt
-edits needed.
+The reviewer also reads your repo's `AGENTS.md` (or `CLAUDE.md`) on every run, so
+the fastest way to teach it your conventions is to write them there.
 
 ## How it works
 

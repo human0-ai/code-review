@@ -13,7 +13,6 @@ import {
 const REPO = requireEnv("REPO");
 const PR_NUMBER = requireEnv("PR_NUMBER");
 const HEAD_SHA = requireEnv("HEAD_SHA");
-const ACTION_PATH = process.env.ACTION_PATH || "";
 const PROMPT_FILE = resolvePromptFile();
 const REVIEW_FILE = "/tmp/review.json";
 
@@ -26,21 +25,24 @@ function requireEnv(name) {
   return value;
 }
 
-// Resolve which review prompt to run. A consumer can point `prompt_file` at a
-// prompt in their own repo (e.g. docs/ai-review.md) to own and tune it;
-// otherwise we fall back to the prompt bundled with this action so the reviewer
-// works out of the box with no files added to the consumer repo.
+// The review prompt is owned by the consumer repo — there is no default. Each
+// repo keeps its own prompt (e.g. docs/ai-review.md) so it can evolve with the
+// project. Fail fast if it's missing rather than reviewing against a stand-in.
 function resolvePromptFile() {
-  const override = (process.env.PROMPT_FILE || "").trim();
-  if (override) {
-    if (existsSync(override)) return override;
-    console.log(`prompt_file "${override}" not found in repo — using bundled prompt.`);
+  const file = (process.env.PROMPT_FILE || "").trim();
+  if (!file) {
+    throw new Error(
+      "prompt_file is required: point it at a review prompt in your repo (e.g. docs/ai-review.md). " +
+        "Copy one from https://github.com/human0-ai/template to get started.",
+    );
   }
-  const bundled = join(ACTION_PATH, "review-prompt.md");
-  if (existsSync(bundled)) return bundled;
-  throw new Error(
-    "No review prompt found: set `prompt_file` to a path in your repo, or run the published action so review-prompt.md is available.",
-  );
+  if (!existsSync(file)) {
+    throw new Error(
+      `prompt_file "${file}" was not found in the repository. Add it (e.g. docs/ai-review.md) — ` +
+        "copy one from https://github.com/human0-ai/template to get started.",
+    );
+  }
+  return file;
 }
 
 function gh(args) {
