@@ -139,15 +139,18 @@ CI runs both on every PR.
 
 ## Releasing
 
-Push a semver tag and the [release workflow](.github/workflows/release.yml)
-verifies the action and moves the floating major tag for you:
+Releases are driven by `package.json`. Bump the `version` in a PR; when it
+merges to `main`, the [release workflow](.github/workflows/release.yml) tags that
+version (`vX.Y.Z`), moves the floating major tag (`vX`) to it, and cuts a GitHub
+release — no manual tagging.
 
-```bash
-git tag v1.0.0 && git push origin v1.0.0
+```jsonc
+// package.json
+"version": "1.2.0"   // bump, merge → v1.2.0 is tagged and released
 ```
 
-`v1` is then re-pointed at that commit, so consumers pinned to `@v1` pick up the
-release automatically. Always pin by major tag (`@v1`), not `@main`.
+`vX` is always re-pointed at the latest release, so consumers pinned to `@v1`
+pick it up automatically. Always pin by major tag (`@v1`), not `@main`.
 
 ## License
 
