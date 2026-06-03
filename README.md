@@ -1,30 +1,41 @@
-# human0 AI Code Review
+# AI Code Review
 
-An autonomous AI reviewer for your pull requests. It reads every PR like a
-skeptical senior engineer — checking correctness, security, architecture,
-simplicity, tests, and docs — then posts inline comments and a single verdict:
-**APPROVE** or **REQUEST_CHANGES**.
+An AI reviewer for your pull requests. It holds your team's standards on every
+PR and gives one clear verdict — **approve** or **request changes** — with
+to-the-point comments on the lines that matter. Pair it with auto-merge and good
+work ships on its own; the rest gets caught before it lands.
 
-Pair it with branch protection and auto-merge and you get a review gate that
-runs in seconds, 24/7, in your own GitHub Actions. No code leaves your repo.
+It runs in your own GitHub Actions, so your code never leaves your repo. It's the
+reviewer that builds and merges [human0](https://human0.ai) itself.
 
-This is the reviewer that ships and merges [human0](https://human0.ai) itself.
-For a full repository template wired up to use it, start with
-[human0-ai/template](https://github.com/human0-ai/template).
+## What you get
 
-## Quick start
+- **A review on every PR, in seconds** — no waiting on a free pair of eyes.
+- **Your bar, your rules** — you write what "good" means in plain language, and
+  it's enforced consistently, every time.
+- **Hands-free shipping** — an approval can auto-merge, so reviewed work lands
+  without anyone clicking the button.
+- **Only re-reads what changed** — after it approves, later pushes get a quick
+  pass over just the new commits.
+- **Yours, end to end** — runs on your account, open source, Apache 2.0.
 
-1. **Add a credential.** In your repo, go to **Settings → Secrets and variables
-   → Actions** and add one of:
+## Set it up
+
+1. **Add a credential** — **Settings → Secrets and variables → Actions**, add one of:
    - `ANTHROPIC_API_KEY` — an [Anthropic API key](https://console.anthropic.com/), or
    - `CLAUDE_CODE_OAUTH_TOKEN` — a Claude.ai OAuth token (`claude setup-token`).
 
-2. **Add your review prompt.** The action ships **no** default prompt — each repo
-   owns its own so it can evolve with the project. Copy
+2. **Add your standards** — copy
    [`docs/ai-review.md`](https://github.com/human0-ai/template/blob/main/docs/ai-review.md)
-   from the template into your repo, then review and tailor it before your first run.
+   from the template into your repo and tailor it to your project. This is what
+   the reviewer holds the line on (see below).
 
-3. **Add the workflow** at `.github/workflows/ai-review.yml`:
+3. **Allow Actions to approve PRs** — **Settings → Actions → General → Workflow
+   permissions** → enable **"Allow GitHub Actions to create and approve pull
+   requests."** In an organization, set this at the org level. Without it the
+   reviewer can't approve.
+
+4. **Add the workflow** at `.github/workflows/ai-review.yml`:
 
 ```yaml
 name: AI Review
@@ -34,7 +45,6 @@ on:
     types: [opened, synchronize, ready_for_review]
 
 permissions:
-  # contents:write is needed to resolve review threads via GraphQL.
   contents: write
   pull-requests: write
   checks: read
@@ -63,23 +73,18 @@ jobs:
           prompt_file: docs/ai-review.md
 ```
 
-4. **Open a PR.** The reviewer runs on the next push and posts its verdict.
+5. **Open a PR.** The reviewer runs on the next push. To let an approval merge on
+   its own, turn on **auto-merge** and require the review in branch protection.
 
-To turn an `APPROVE` into an automatic merge, enable **auto-merge** on the PR and
-require the review in your branch protection rules.
+> Tip: add a `no-ai-review` label to a PR to skip the reviewer on it.
 
-## Repository settings
+## Your standards live in one file
 
-For the reviewer to **approve** PRs (which is what lets an approval auto-merge),
-GitHub must allow Actions to approve pull requests:
-
-**Settings → Actions → General → Workflow permissions** → enable
-**"Allow GitHub Actions to create and approve pull requests."**
-
-In an organization this is often locked at the org level — set it under
-**Organization → Settings → Actions → General** instead. You do **not** need to
-switch the default token to "Read and write": the workflow already requests the
-`contents`/`pull-requests` write scopes it needs via its `permissions:` block.
+The reviewer enforces what you put in `docs/ai-review.md` — the bar, what to
+check, your conventions. It's plain language, so tuning the reviewer is just
+editing that file: start from the template's and make it yours. It also reads
+your `AGENTS.md` / `CLAUDE.md` on every run, so house rules written there are
+followed without touching the prompt.
 
 ## Inputs
 
@@ -91,66 +96,17 @@ switch the default token to "Read and write": the workflow already requests the
 | `repo` | yes | Repository in `owner/name` form. |
 | `anthropic_api_key` | one of | Anthropic API key. |
 | `claude_code_oauth_token` | one of | Claude.ai OAuth token. |
-| `prompt_file` | yes | Path in your repo to your review prompt (e.g. `docs/ai-review.md`). No default — the action requires this. |
+| `prompt_file` | yes | Path in your repo to your standards (e.g. `docs/ai-review.md`). |
 
 Provide **either** `anthropic_api_key` **or** `claude_code_oauth_token`.
 
-## What's in the prompt
+## Contributing
 
-The review prompt is composed in layers, so you only write the part that's
-yours:
-
-1. **Protocol — from this action.** The context the runner injects, how review
-   scope works, the sub-agent process, and the exact output format. You don't
-   write or maintain this; it ships with the action and is the same everywhere.
-2. **Your standards — `prompt_file`.** The bar and what to check. This is the
-   only part you own, and it stays short (see the template's `docs/ai-review.md`,
-   ~50 lines) because it holds standards, not mechanics.
-
-Tuning the reviewer — the bar, project-specific rules, tone — is a normal edit to
-your `prompt_file`. Because the reviewer runs against the prompt on the PR
-branch, you can refine it in the same PR it reviews.
-
-The reviewer also reads your repo's `AGENTS.md` (or `CLAUDE.md`) on every run, so
-the fastest way to teach it your conventions is to write them there.
-
-## How it works
-
-- Runs on every non-draft PR (add a `no-ai-review` label to skip one).
-- Posts inline comments only on lines the PR actually changed.
-- After it approves a PR, later pushes get an **incremental** review — it only
-  re-reads what changed since its last approval instead of re-auditing the whole
-  diff.
-- Replies on existing review threads and resolves them as they're addressed,
-  so the conversation reads like a human back-and-forth.
-
-## Development
-
-The reviewer logic lives in `run.mjs`; its pure helpers (diff scoping, comment
-placement) are in `scope.mjs` and covered by `scope.test.mjs`. No dependencies —
-tests use the Node built-in runner.
-
-```bash
-npm run lint   # syntax check
-npm test       # node --test
-```
-
-CI runs both on every PR.
-
-## Releasing
-
-Releases are driven by `package.json`. Bump the `version` in a PR; when it
-merges to `main`, the [release workflow](.github/workflows/release.yml) tags that
-version (`vX.Y.Z`), moves the floating major tag (`vX`) to it, and cuts a GitHub
-release — no manual tagging.
-
-```jsonc
-// package.json
-"version": "1.2.0"   // bump, merge → v1.2.0 is tagged and released
-```
-
-`vX` is always re-pointed at the latest release, so consumers pinned to `@v1`
-pick it up automatically. Always pin by major tag (`@v1`), not `@main`.
+A small Node action — `run.mjs` plus helpers in `scope.mjs` (tested in
+`scope.test.mjs`, no dependencies). Run `npm run lint && npm test`; CI runs both
+on every PR. Releases are driven by `package.json`: bump the `version` in a PR,
+and merging it tags and releases that version and re-points the floating `@v1`
+tag.
 
 ## License
 
