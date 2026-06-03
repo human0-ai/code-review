@@ -1,7 +1,8 @@
 import { execSync, spawn, spawnSync } from "child_process";
 import { readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync } from "fs";
 import { homedir } from "os";
-import { join } from "path";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 import {
   renderThread,
   buildDiffScope,
@@ -433,17 +434,23 @@ const prBody = ghSafe(
 const scope = buildDiffScope(diff);
 
 // --- Step 2: Build prompt ---
-// One prompt for both fresh and follow-up reviews — the "Follow-up vs full
-// review" section in docs/ai-review.md tells the agent how to read the
-// `### Last approval` / `### Delta since last approval` context. The mode
-// label is kept for telemetry only.
-const basePrompt = readFileSync(PROMPT_FILE, "utf-8");
+// The prompt is composed in layers: the action's protocol header (how reviews
+// run, the context spec, follow-up mechanics) + this repo's review standards
+// (PROMPT_FILE) + the action's protocol footer (sub-agent process, scope rule,
+// output format) + the injected PR context. The protocol ships with the action
+// so consumer prompts hold only their standards instead of duplicating it.
+const ACTION_DIR = dirname(fileURLToPath(import.meta.url));
+const headerPrompt = readFileSync(join(ACTION_DIR, "prompt", "header.md"), "utf-8");
+const footerPrompt = readFileSync(join(ACTION_DIR, "prompt", "footer.md"), "utf-8");
+const standardsPrompt = readFileSync(PROMPT_FILE, "utf-8");
 const mode = isIncremental ? "incremental" : "full";
 console.log(
   `Review run: ${isIncremental ? `delta since ${lastBotApproval.commit_id.slice(0, 7)}` : "full"}`,
 );
 const fullPrompt = [
-  basePrompt,
+  headerPrompt,
+  `\n---\n\n# Repository review guidance\n\n${standardsPrompt}`,
+  `\n---\n\n${footerPrompt}`,
   `\n---\n\n## PR #${PR_NUMBER}: ${prTitle || "(unknown)"}\n`,
   `### Description\n${prBody}`,
   `\n### Changed files\n${changedFiles}`,

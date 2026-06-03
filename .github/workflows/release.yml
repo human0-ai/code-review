@@ -1,11 +1,15 @@
 name: Release
 
-# Push a semver tag (e.g. v1.2.3) to cut a release. This workflow verifies the
-# action, then moves the floating major tag (v1) to that commit so consumers
-# pinned to `human0-ai/code-review@v1` pick up the release automatically.
+# Releases are driven by package.json. On every push to main, if the version
+# there hasn't been tagged yet, tag it (vX.Y.Z), move the floating major tag
+# (vX) to that commit so `@vX` consumers pick it up, and cut a GitHub release.
+#
+# To ship a release: bump the version in package.json in a PR — merging it
+# releases. PR CI (ci.yml) already gates the code before it reaches main.
 on:
   push:
-    tags: ["v*.*.*"]
+    branches: [main]
+    paths: ["package.json"]
 
 permissions:
   contents: write
@@ -18,31 +22,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-
-      # Never move the major tag onto a commit that doesn't pass.
-      - run: npm run lint
-      - run: npm test
-
-      - name: Move major version tag
-        env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          MAJOR="${TAG%%.*}"   # v1.2.3 -> v1
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -f "$MAJOR" "$TAG"
-          git push origin "refs/tags/$MAJOR" --force
-
-      - name: Create GitHub release
+      - name: Tag and release if the version is new
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$TAG" \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "$TAG" \
-            --generate-notes \
-          || echo "Release for $TAG already exists — skipping."
+          TAG="v$(node -p "require('./package.json').version")"
+          MAJOR="${TAG%%.*}"   # v1.2.3 -> v1
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "$TAG is already tagged — nothing to release."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "$TAG"
+          git tag -f "$MAJOR" "$TAG"
+          git push origin "refs/tags/$TAG"
+          git push origin "refs/tags/$MAJOR" --force
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes
