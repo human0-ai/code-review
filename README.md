@@ -68,6 +68,19 @@ jobs:
 To turn an `APPROVE` into an automatic merge, enable **auto-merge** on the PR and
 require the review in your branch protection rules.
 
+## Repository settings
+
+For the reviewer to **approve** PRs (which is what lets an approval auto-merge),
+GitHub must allow Actions to approve pull requests:
+
+**Settings → Actions → General → Workflow permissions** → enable
+**"Allow GitHub Actions to create and approve pull requests."**
+
+In an organization this is often locked at the org level — set it under
+**Organization → Settings → Actions → General** instead. You do **not** need to
+switch the default token to "Read and write": the workflow already requests the
+`contents`/`pull-requests` write scopes it needs via its `permissions:` block.
+
 ## Inputs
 
 | Input | Required | Description |

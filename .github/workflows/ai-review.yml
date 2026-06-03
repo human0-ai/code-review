@@ -1,0 +1,38 @@
+name: AI Review
+
+# This repo reviews its own pull requests with the action it ships. `uses: ./`
+# runs the action as modified by the PR, so a change that breaks the reviewer
+# shows up here before it's released.
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+permissions:
+  # contents:write is required to resolve review threads via the GraphQL API.
+  contents: write
+  pull-requests: write
+  checks: read
+
+jobs:
+  review:
+    if: ${{ !github.event.pull_request.draft && !contains(github.event.pull_request.labels.*.name, 'no-ai-review') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: ai-review-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - uses: ./
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ github.token }}
+          pr_number: ${{ github.event.pull_request.number }}
+          head_sha: ${{ github.event.pull_request.head.sha }}
+          repo: ${{ github.repository }}
+          prompt_file: docs/ai-review.md
