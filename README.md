@@ -95,13 +95,21 @@ switch the default token to "Read and write": the workflow already requests the
 
 Provide **either** `anthropic_api_key` **or** `claude_code_oauth_token`.
 
-## Customizing the review
+## What's in the prompt
 
-The reviewer's behavior is just the prompt at `prompt_file`. It lives in your
-repo, so tuning it — adjusting the bar, adding project-specific rules, changing
-tone — is a normal edit to that file. Because the reviewer runs against the
-prompt on the PR branch, you can even refine the reviewer in the same PR it
-reviews.
+The review prompt is composed in layers, so you only write the part that's
+yours:
+
+1. **Protocol — from this action.** The context the runner injects, how review
+   scope works, the sub-agent process, and the exact output format. You don't
+   write or maintain this; it ships with the action and is the same everywhere.
+2. **Your standards — `prompt_file`.** The bar and what to check. This is the
+   only part you own, and it stays short (see the template's `docs/ai-review.md`,
+   ~50 lines) because it holds standards, not mechanics.
+
+Tuning the reviewer — the bar, project-specific rules, tone — is a normal edit to
+your `prompt_file`. Because the reviewer runs against the prompt on the PR
+branch, you can refine it in the same PR it reviews.
 
 The reviewer also reads your repo's `AGENTS.md` (or `CLAUDE.md`) on every run, so
 the fastest way to teach it your conventions is to write them there.
