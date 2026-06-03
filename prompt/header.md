@@ -42,8 +42,8 @@ The runner builds the same prompt every time, but injects `### Last approval`
 last approval` (the diff since) whenever this is a re-review of a PR you've
 already approved. Use those to decide how to run this round:
 
-- **No `### Last approval` block** → fresh review. Run the full process,
-  including the sub-agent fan-out.
+- **No `### Last approval` block** → fresh review. Run the repository's full
+  process, including any sub-agent passes its standards define.
 - **`### Last approval` block present** → follow-up. The approved code is
   settled — **don't re-audit it**. Focus on the delta:
   - Small, focused delta (typo, addressed thread, plan note, comment-only edit,
