@@ -43,14 +43,14 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.npm-global
-        key: claude-code-cli-v1-${{ runner.os }}
+        key: claude-code-cli-v2-${{ runner.os }}
 
     - name: Install Claude Code
       shell: bash
       run: |
         npm config set prefix ~/.npm-global
         export PATH="$HOME/.npm-global/bin:$PATH"
-        npm install -g @anthropic-ai/claude-code@1
+        npm install -g @anthropic-ai/claude-code@2
 
     - name: Run review
       shell: bash
