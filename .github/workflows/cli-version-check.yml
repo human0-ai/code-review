@@ -1,0 +1,48 @@
+name: Claude Code CLI version check
+
+# Guards against the reviewer silently falling behind on the Claude Code CLI.
+# The action pins a major (`@anthropic-ai/claude-code@N` in action.yml), and the
+# `opus` alias maps to whatever model that major ships — so a stale major means a
+# stale model. This runs daily and fails when a newer major is published (e.g.
+# v3 lands while we still pin v2), which is the signal to bump action.yml (and
+# the install cache key) to the new major.
+on:
+  schedule:
+    - cron: "0 9 * * *" # daily at 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare pinned major against the latest published major
+        run: |
+          set -euo pipefail
+
+          # The major the action installs, parsed from action.yml so this stays
+          # a single source of truth (no second place to keep in sync).
+          PINNED="$(grep -oE '@anthropic-ai/claude-code@[0-9]+' action.yml \
+            | grep -oE '[0-9]+$' | head -1)"
+          if [ -z "${PINNED:-}" ]; then
+            echo "::error::Could not find a pinned '@anthropic-ai/claude-code@<major>' in action.yml." >&2
+            exit 1
+          fi
+
+          # The latest published version, straight from the npm registry.
+          LATEST_FULL="$(npm view @anthropic-ai/claude-code version)"
+          LATEST_MAJOR="${LATEST_FULL%%.*}"
+
+          echo "Pinned major in action.yml: $PINNED"
+          echo "Latest published version:   $LATEST_FULL (major $LATEST_MAJOR)"
+
+          if [ "$PINNED" != "$LATEST_MAJOR" ]; then
+            echo "::error::action.yml pins @anthropic-ai/claude-code@$PINNED but the latest major is $LATEST_MAJOR ($LATEST_FULL). Bump the install pin and the cache key in action.yml to @$LATEST_MAJOR."
+            exit 1
+          fi
+
+          echo "Up to date: the action pins the latest Claude Code major (@$PINNED)."
