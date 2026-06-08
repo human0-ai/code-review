@@ -5,6 +5,11 @@ PR and gives one clear verdict — **approve** or **request changes** — with
 to-the-point comments on the lines that matter. Pair it with auto-merge and good
 work ships on its own; the rest gets caught before it lands.
 
+It's the gate that makes a self-driving dev loop safe: a coding agent opens the
+PR, this reviewer checks it, the agent fixes whatever it flags and re-submits,
+and an approval auto-merges the result — no human clicking through. Its comments
+aren't just a verdict; they're the feedback the agent acts on to close the loop.
+
 It runs in your own GitHub Actions, so your code never leaves your repo. It's the
 reviewer that builds and merges [human0](https://human0.ai) itself.
 
@@ -13,6 +18,8 @@ reviewer that builds and merges [human0](https://human0.ai) itself.
 - **A review on every PR, in seconds** — no waiting on a free pair of eyes.
 - **Your bar, your rules** — you write what "good" means in plain language, and
   it's enforced consistently, every time.
+- **Feedback an agent can act on** — clear, inline comments a coding agent reads,
+  fixes, and re-submits against until the PR is approved.
 - **Hands-free shipping** — an approval can auto-merge, so reviewed work lands
   without anyone clicking the button.
 - **Only re-reads what changed** — after it approves, later pushes get a quick
