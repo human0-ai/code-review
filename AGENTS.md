@@ -97,6 +97,11 @@ the reviewer behaves.
 Releases are driven by `package.json`: bump the `version` in a PR, and merging it
 tags and releases that version and re-points the floating `@v1` tag.
 
+**If your PR changes what `@v1` users run — `action.yml`, `run.mjs`, `scope.mjs`,
+or `prompt/` — bump the `version` in the same PR.** Skip the bump and the change
+merges to `main` but never ships: `@v1` stays pinned to the last released version.
+Docs-, test-, and CI-only changes don't need a bump.
+
 ## Plans & Docs
 
 `/.plans/` and `/docs/` are **living documents** — update them in the same PR as
