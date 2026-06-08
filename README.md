@@ -26,8 +26,7 @@ reviewer that builds and merges [human0](https://human0.ai) itself.
 
 - **Reviewed in seconds** — every PR, day or night. No waiting on a free pair of eyes.
 - **Catches what matters** — bugs, security holes, missing tests, broken conventions.
-- **Tune it in one file** — change the bar, tone, and rules by editing a plain-language doc. No code.
-- **Your bar, your rules** — write what "good" means in plain language. Held every time.
+- **Your bar, your rules** — define what "good" means in one plain-language doc. No code, and held every time.
 - **Never tires, never skips** — the same careful read on PR #1 and PR #1,000.
 - **Feedback an agent can act on** — clear inline comments it reads, fixes, and re-submits against.
 - **Hands-free shipping** — an approval auto-merges. No one clicks the button.
