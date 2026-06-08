@@ -1,30 +1,28 @@
 # AI Code Review
 
-An AI reviewer for your pull requests. It holds your team's standards on every
-PR and gives one clear verdict — **approve** or **request changes** — with
-to-the-point comments on the lines that matter. Pair it with auto-merge and good
-work ships on its own; the rest gets caught before it lands.
+An AI reviewer for your pull requests. It checks every PR like a senior engineer
+and gives one verdict: **approve** or **request changes**. Comments land inline,
+on the lines that matter.
 
-It's the gate that makes a self-driving dev loop safe: a coding agent opens the
-PR, this reviewer checks it, the agent fixes whatever it flags and re-submits,
-and an approval auto-merges the result — no human clicking through. Its comments
-aren't just a verdict; they're the feedback the agent acts on to close the loop.
+It's the gate that makes hands-off shipping safe. A coding agent opens the PR.
+The reviewer checks it. The agent fixes what it flags and tries again. An
+approval auto-merges — no human clicking through. The comments aren't just a
+verdict; they're the feedback the agent acts on to close the loop.
 
-It runs in your own GitHub Actions, so your code never leaves your repo. It's the
+Runs in your own GitHub Actions. Your code never leaves your repo. It's the
 reviewer that builds and merges [human0](https://human0.ai) itself.
 
 ## What you get
 
-- **A review on every PR, in seconds** — no waiting on a free pair of eyes.
-- **Your bar, your rules** — you write what "good" means in plain language, and
-  it's enforced consistently, every time.
-- **Feedback an agent can act on** — clear, inline comments a coding agent reads,
-  fixes, and re-submits against until the PR is approved.
-- **Hands-free shipping** — an approval can auto-merge, so reviewed work lands
-  without anyone clicking the button.
-- **Only re-reads what changed** — after it approves, later pushes get a quick
-  pass over just the new commits.
-- **Yours, end to end** — runs on your account, open source, Apache 2.0.
+- **A review in seconds** — every PR, no waiting on a free pair of eyes.
+- **Your bar, your rules** — write what "good" means in plain language. Enforced
+  every time.
+- **Feedback an agent can act on** — clear inline comments it reads, fixes, and
+  re-submits against until the PR is approved.
+- **Hands-free shipping** — an approval auto-merges. No one clicks the button.
+- **Only re-reads what changed** — after approval, later pushes get a quick pass
+  over the new commits.
+- **Yours, end to end** — your account, open source, Apache 2.0.
 
 ## Set it up
 
