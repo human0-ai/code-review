@@ -16,10 +16,17 @@ They're the feedback the agent acts on to close the loop.
 Runs in your own GitHub Actions. Your code never leaves your repo. It's the
 reviewer that builds and merges [human0](https://human0.ai) itself.
 
+> **Want the whole loop, not just the reviewer?** Start from the
+> [human0 template](https://github.com/human0-ai/template). It wires up the
+> reviewer, the agent guidelines, and an autonomous build-review-merge workflow —
+> describe a change, an agent builds it, and it ships itself. This action is just
+> the gate; the template is the full machine.
+
 ## What you get
 
 - **Reviewed in seconds** — every PR, day or night. No waiting on a free pair of eyes.
 - **Catches what matters** — bugs, security holes, missing tests, broken conventions.
+- **Tune it in one file** — change the bar, tone, and rules by editing a plain-language doc. No code.
 - **Your bar, your rules** — write what "good" means in plain language. Held every time.
 - **Never tires, never skips** — the same careful read on PR #1 and PR #1,000.
 - **Feedback an agent can act on** — clear inline comments it reads, fixes, and re-submits against.
@@ -86,13 +93,17 @@ jobs:
 
 > Tip: add a `no-ai-review` label to a PR to skip the reviewer on it.
 
-## Your standards live in one file
+## Change how it reviews — edit one doc
 
-The reviewer enforces what you put in `docs/ai-review.md` — the bar, what to
-check, your conventions. It's plain language, so tuning the reviewer is just
-editing that file: start from the template's and make it yours. It also reads
-your `AGENTS.md` / `CLAUDE.md` on every run, so house rules written there are
-followed without touching the prompt.
+Want it stricter? Pickier about tests? Quiet on style? Edit `docs/ai-review.md`.
+That one file is the bar, what to check, your conventions — in plain language. No
+code, no config. Start from the template's and make it yours.
+
+It also reads your `AGENTS.md` / `CLAUDE.md` on every run, so house rules written
+there are followed for free.
+
+For the full setup — reviewer, guidelines, and the autonomous workflow wired
+together — fork the [human0 template](https://github.com/human0-ai/template).
 
 ## Inputs
 
