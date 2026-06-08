@@ -1,28 +1,31 @@
 # AI Code Review
 
-An AI reviewer for your pull requests. It checks every PR like a senior engineer
-and gives one verdict: **approve** or **request changes**. Comments land inline,
-on the lines that matter.
+A tireless senior engineer on every pull request.
 
-It's the gate that makes hands-off shipping safe. A coding agent opens the PR.
-The reviewer checks it. The agent fixes what it flags and tries again. An
-approval auto-merges — no human clicking through. The comments aren't just a
-verdict; they're the feedback the agent acts on to close the loop.
+It reads the whole PR. It catches bugs, security holes, missing tests, sloppy
+code. Then it gives one verdict: **approve** or **request changes**. Comments
+land inline, on the lines that matter.
+
+No waiting. No rubber-stamps. No bad days. The same bar, every time.
+
+This is the gate that makes hands-off shipping safe. An agent opens the PR. The
+reviewer checks it. The agent fixes what it flags and tries again. An approval
+auto-merges — no one touches a button. The comments aren't just a verdict.
+They're the feedback the agent acts on to close the loop.
 
 Runs in your own GitHub Actions. Your code never leaves your repo. It's the
 reviewer that builds and merges [human0](https://human0.ai) itself.
 
 ## What you get
 
-- **A review in seconds** — every PR, no waiting on a free pair of eyes.
-- **Your bar, your rules** — write what "good" means in plain language. Enforced
-  every time.
-- **Feedback an agent can act on** — clear inline comments it reads, fixes, and
-  re-submits against until the PR is approved.
+- **Reviewed in seconds** — every PR, day or night. No waiting on a free pair of eyes.
+- **Catches what matters** — bugs, security holes, missing tests, broken conventions.
+- **Your bar, your rules** — write what "good" means in plain language. Held every time.
+- **Never tires, never skips** — the same careful read on PR #1 and PR #1,000.
+- **Feedback an agent can act on** — clear inline comments it reads, fixes, and re-submits against.
 - **Hands-free shipping** — an approval auto-merges. No one clicks the button.
-- **Only re-reads what changed** — after approval, later pushes get a quick pass
-  over the new commits.
-- **Yours, end to end** — your account, open source, Apache 2.0.
+- **Reviews only what changed** — after approval, later pushes get a quick pass over the new commits.
+- **Yours, end to end** — your account, open source, Apache 2.0. Bring your own key.
 
 ## Set it up
 
