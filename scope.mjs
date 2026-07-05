@@ -75,6 +75,18 @@ export function buildDiffScope(diffText) {
   return { allowed, ranges };
 }
 
+// Cap an oversized diff before it goes into the prompt so a huge PR can't blow
+// the model's context window. Truncates on a line boundary and appends a marker
+// noting how much was dropped.
+export function capDiff(diff, maxBytes = 60000) {
+  if (!diff || diff.length <= maxBytes) return diff;
+  const head = diff.slice(0, maxBytes);
+  const lastNewline = head.lastIndexOf("\n");
+  const trimmed = head.slice(0, lastNewline);
+  const dropped = diff.length - trimmed.length;
+  return `${trimmed}\n… (${dropped} bytes of diff truncated)`;
+}
+
 export function formatScopeSection(ranges) {
   if (!ranges.size) return "(no changed lines in diff)";
   const entries = [...ranges.entries()];

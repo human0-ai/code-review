@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import {
   renderThread,
   buildDiffScope,
+  capDiff,
   formatScopeSection,
   partitionComments,
   foldIntoBody,
@@ -322,7 +323,7 @@ function runClaudeCli(prompt) {
 }
 
 // --- Step 1: Fetch PR context ---
-const diff = ghSafe(`pr diff ${PR_NUMBER}`);
+const diff = capDiff(ghSafe(`pr diff ${PR_NUMBER}`));
 const changedFiles = ghSafe(`pr diff ${PR_NUMBER} --name-only`);
 
 // Recent commit context — gives the reviewer a cheap signal of repo direction
