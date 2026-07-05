@@ -14,7 +14,8 @@ auto-merges — no one touches a button. The comments aren't just a verdict.
 They're the feedback the agent acts on to close the loop.
 
 Runs in your own GitHub Actions. Your code never leaves your repo. It's the
-reviewer that builds and merges [human0](https://human0.ai) itself.
+reviewer that builds and merges [human0](https://human0.ai) itself — here's
+[how and why we open-sourced it](https://human0.ai/blog/open-source-ai-code-review-github-action/).
 
 > **Want the whole loop, not just the reviewer?** Start from the
 > [human0 template](https://github.com/human0-ai/template). It wires up the
