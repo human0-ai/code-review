@@ -16,6 +16,9 @@ They're the feedback the agent acts on to close the loop.
 Runs in your own GitHub Actions. Your code never leaves your repo. It's the
 reviewer that builds and merges [human0](https://human0.ai) itself.
 
+The story behind it: [An Open-Source AI Code Review GitHub Action — Runs in Your
+Repo, BYO Key](https://human0.ai/blog/open-source-ai-code-review-github-action/).
+
 > **Want the whole loop, not just the reviewer?** Start from the
 > [human0 template](https://github.com/human0-ai/template). It wires up the
 > reviewer, the agent guidelines, and an autonomous build-review-merge workflow —
