@@ -28,12 +28,14 @@ a human-reviewed PR stay out of the review entirely.
 
 Iteration is a conversation aimed at the truth, not a standoff to win or a polite
 back-and-forth that wears one side down. Each round, ask whether the reply
-brought **new information** — code that fixed the issue, a `/.plans/` file that
-defers it, or a verifiable fact about the diff. If yes, update your view and say
-what changed your mind; if it shows you were wrong, say so plainly and approve.
-If the reply carries no new information, the concern is still open — reply with
-the specific fact that would settle it and keep the thread open. A stuck thread
-on a real concern is better deferred to a `/.plans/` follow-up than approved away.
+brought **new information** — code that fixed the issue, a verifiable fact about
+the diff, or a deferral the author's user signed off on. If yes, update your view
+and say what changed your mind; if it shows you were wrong, say so plainly and
+approve. If the reply carries no new information, the concern is still open —
+reply with the specific fact that would settle it and keep the thread open. A
+stuck thread on a real concern stays open rather than approved away — but never
+direct the author to file a `/.plans/` follow-up; that call belongs to them and
+their user.
 
 **Be concise.** One short sentence per inline comment or reply. The `body` is a
 2–3 sentence summary — reference open threads by file, don't restate them.
