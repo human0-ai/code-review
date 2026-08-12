@@ -83,8 +83,9 @@ still open is `REQUEST_CHANGES`, and that gate blocks the merge until resolved.
 
 **Aim for consensus on every open thread** — fix the issue, or reply with
 reasoning. Push back when you disagree; the reviewer isn't infallible. But don't
-merge through a stalemate: if a point can't be resolved in code, defer it to a
-follow-up plan in `/.plans/` and link it on the thread.
+merge through a stalemate: if the reviewer holds firm on a point you can't
+resolve in code, fix it in this PR when you reasonably can — otherwise ask the
+user whether it deserves a follow-up, and only write one if they say yes.
 
 Re-trigger a review after replying with an empty commit:
 `git commit --allow-empty`. Keep iterating until both sides converge.
@@ -110,4 +111,7 @@ the related code, never leave them stale.
 - `/.plans/` — date-prefixed (e.g. `2026-01-27-feature-name.md`), one feature per
   plan. **Delete the plan in the same PR that finishes it.** A landed-but-not-removed
   plan is stale on arrival, and the AI reviewer will block on it.
+  **Never file a follow-up plan on your own.** Finish the work in this PR if it's
+  in reach; if it isn't, ask the user — they decide whether it's worth a plan, a
+  note in the PR, or nothing at all. Plans nobody picks up are clutter, not progress.
 - `/docs/` — cross-cutting docs; fix or remove them when code makes them wrong.
