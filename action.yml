@@ -50,7 +50,9 @@ runs:
       run: |
         npm config set prefix ~/.npm-global
         export PATH="$HOME/.npm-global/bin:$PATH"
-        npm install -g @anthropic-ai/claude-code@2
+        # --include=optional: the native binary ships as an optional dependency
+        # and the runner's npm config leaves it out, so it must be asked for.
+        npm install -g --include=optional @anthropic-ai/claude-code@2
         # npm 11 (the default on Node 24 runners) refuses lifecycle scripts it
         # hasn't been told to allow, so the CLI's postinstall never runs and the
         # platform-native binary is never downloaded — every review then dies
