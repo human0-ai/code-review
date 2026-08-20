@@ -43,21 +43,42 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.npm-global
-        key: claude-code-cli-v3-${{ runner.os }}
+        key: claude-code-cli-v4-${{ runner.os }}
 
     - name: Install Claude Code
       shell: bash
       run: |
         npm config set prefix ~/.npm-global
         export PATH="$HOME/.npm-global/bin:$PATH"
-        # --include=optional: the native binary ships as an optional dependency
-        # and the runner's npm config leaves it out, so it must be asked for.
-        npm install -g --include=optional @anthropic-ai/claude-code@2
+
+        # `claude` is a small wrapper; the interpreter is a ~500MB per-platform
+        # binary in a separate package, declared as an optional dependency. On
+        # GitHub runners npm does not pull that optional dependency in — the log
+        # reads "added 1 package" and --include=optional does not change it — so
+        # ask for the native package by name rather than hoping it resolves.
+        # Both packages must be the same version, so pin the range once here:
+        # asking for @2 twice could straddle a publish.
+        VERSION=$(npm view '@anthropic-ai/claude-code@2' version --json \
+          | node -pe 'const v=JSON.parse(require("fs").readFileSync(0,"utf8")); Array.isArray(v)?v[v.length-1]:v')
+
+        # Which native package: same platform key the wrapper's postinstall
+        # computes, so the two agree on musl vs glibc and on arch.
+        PLATFORM=$(node -pe '
+          const a=require("os").arch();
+          const musl=process.platform==="linux"
+            && process.report?.getReport?.().header?.glibcVersionRuntime===undefined;
+          process.platform==="linux" ? "linux-"+a+(musl?"-musl":"") : process.platform+"-"+a')
+
+        npm install -g \
+          "@anthropic-ai/claude-code@$VERSION" \
+          "@anthropic-ai/claude-code-$PLATFORM@$VERSION"
+
         # npm 11 (the default on Node 24 runners) refuses lifecycle scripts it
-        # hasn't been told to allow, so the CLI's postinstall never runs and the
-        # platform-native binary is never downloaded — every review then dies
-        # with "claude native binary not installed". Run the postinstall here.
+        # hasn't been told to allow, so the wrapper's postinstall never runs and
+        # the native binary is never linked over the bin/claude stub — every
+        # review then dies with "claude native binary not installed". Run it.
         node "$HOME/.npm-global/lib/node_modules/@anthropic-ai/claude-code/install.cjs"
+
         # Fail in this step, not three minutes later inside the review.
         claude --version
 
