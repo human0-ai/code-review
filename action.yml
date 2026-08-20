@@ -43,14 +43,25 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.npm-global
-        key: claude-code-cli-v2-${{ runner.os }}
+        key: claude-code-cli-v4-${{ runner.os }}
 
     - name: Install Claude Code
       shell: bash
       run: |
         npm config set prefix ~/.npm-global
         export PATH="$HOME/.npm-global/bin:$PATH"
-        npm install -g @anthropic-ai/claude-code@2
+
+        # `claude` is a small wrapper; the interpreter is a ~500MB per-platform
+        # binary in a separate package, pulled in and linked over the bin/claude
+        # stub by the wrapper's postinstall. npm 11 (the default on Node 24
+        # runners) refuses lifecycle scripts it has not been told to allow, so
+        # that postinstall never runs and `claude` dies with "claude native
+        # binary not installed". Allowing the one script installs both packages
+        # and leaves a working binary.
+        npm install -g --allow-scripts=@anthropic-ai/claude-code '@anthropic-ai/claude-code@2'
+
+        # Fail in this step, not three minutes later inside the review.
+        claude --version
 
     - name: Run review
       shell: bash
