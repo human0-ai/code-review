@@ -52,32 +52,43 @@ runs:
         export PATH="$HOME/.npm-global/bin:$PATH"
 
         # `claude` is a small wrapper; the interpreter is a ~500MB per-platform
-        # binary in a separate package, declared as an optional dependency. On
-        # GitHub runners npm does not pull that optional dependency in — the log
-        # reads "added 1 package" and --include=optional does not change it — so
-        # ask for the native package by name rather than hoping it resolves.
-        # Both packages must be the same version, so pin the range once here:
-        # asking for @2 twice could straddle a publish.
-        VERSION=$(npm view '@anthropic-ai/claude-code@2' version --json \
-          | node -pe 'const v=JSON.parse(require("fs").readFileSync(0,"utf8")); Array.isArray(v)?v[v.length-1]:v')
+        # binary in a separate package, declared as an optional dependency of
+        # the wrapper. Two independent things go wrong on a GitHub runner:
+        #
+        #  1. npm does not pull that optional dependency in. The install log
+        #     reads "added 1 package", and --include=optional does not change
+        #     it. So the binary has to be asked for by name.
+        #  2. npm 11 (the default on Node 24 runners) refuses lifecycle scripts
+        #     it has not been told to allow, so the wrapper's postinstall —
+        #     which links the binary over the bin/claude stub — never runs.
+        #
+        # Allowing the script fixes (2) but not (1): with nothing to link, the
+        # postinstall prints "Native package not found" and `claude` still dies
+        # with "claude native binary not installed".
+        npm install -g '@anthropic-ai/claude-code@2'
 
-        # Which native package: same platform key the wrapper's postinstall
-        # computes, so the two agree on musl vs glibc and on arch.
+        # Ask npm where it actually put that, rather than assuming the POSIX
+        # global layout — the Windows global root has no lib/ segment.
+        GLOBAL_ROOT="$(npm root -g)"
+        WRAPPER="$GLOBAL_ROOT/@anthropic-ai/claude-code"
+
+        # Take the version from the wrapper npm just installed, so the native
+        # package is guaranteed to match it — resolving the @2 range a second
+        # time could straddle a publish.
+        VERSION="$(node -p "require('$WRAPPER/package.json').version")"
+
+        # Same platform key the wrapper's postinstall computes, so the two agree
+        # on arch and on musl vs glibc.
         PLATFORM=$(node -pe '
           const a=require("os").arch();
           const musl=process.platform==="linux"
             && process.report?.getReport?.().header?.glibcVersionRuntime===undefined;
           process.platform==="linux" ? "linux-"+a+(musl?"-musl":"") : process.platform+"-"+a')
 
-        npm install -g \
-          "@anthropic-ai/claude-code@$VERSION" \
-          "@anthropic-ai/claude-code-$PLATFORM@$VERSION"
+        npm install -g "@anthropic-ai/claude-code-$PLATFORM@$VERSION"
 
-        # npm 11 (the default on Node 24 runners) refuses lifecycle scripts it
-        # hasn't been told to allow, so the wrapper's postinstall never runs and
-        # the native binary is never linked over the bin/claude stub — every
-        # review then dies with "claude native binary not installed". Run it.
-        node "$HOME/.npm-global/lib/node_modules/@anthropic-ai/claude-code/install.cjs"
+        # Now there is something to link — run the postinstall npm skipped.
+        node "$WRAPPER/install.cjs"
 
         # Fail in this step, not three minutes later inside the review.
         claude --version
