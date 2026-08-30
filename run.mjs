@@ -73,16 +73,20 @@ function ghSpawn(argv) {
   return result.stdout.trim();
 }
 
+/** Review ids already dismissed this run, so a later pass can't re-send them. */
+const dismissedReviewIds = new Set();
+
 /**
  * Drop the bot's stale CHANGES_REQUESTED reviews.
+ *
+ * `message` is a callback taking the review, so each dismissal names the commit
+ * that review was actually submitted against.
  *
  * `dismiss` needs pull-requests:write, which the action already requires to
  * submit reviews at all. Failures log and continue: a PR left blocked is worse
  * than the current behaviour, but it is not worth losing the review over.
  * Returns the number actually dismissed.
  */
-const dismissedReviewIds = new Set();
-
 function dismissReviews(list, message) {
   let dismissed = 0;
   for (const review of list) {
@@ -94,7 +98,7 @@ function dismissReviews(list, message) {
         "PUT",
         `repos/${REPO}/pulls/${PR_NUMBER}/reviews/${review.id}/dismissals`,
         "-f",
-        `message=${message}`,
+        `message=${typeof message === "function" ? message(review) : message}`,
         "-f",
         "event=DISMISS",
       ]);
@@ -121,7 +125,8 @@ function dismissStaleObjections() {
   if (!stale.length) return 0;
   const count = dismissReviews(
     stale,
-    `Superseded: this review was submitted against ${(stale[0].commit_id || "an earlier commit").slice(0, 7)}, and the PR head is now ${HEAD_SHA.slice(0, 7)}. Dismissing it so it can't block a head it never looked at; the review for the current head stands on its own.`,
+    (review) =>
+      `Superseded: this review was submitted against ${(review.commit_id || "an earlier commit").slice(0, 7)}, and the PR head is now ${HEAD_SHA.slice(0, 7)}. Dismissing it so it can't block a head it never looked at; the review for the current head stands on its own.`,
   );
   console.log(`REVIEW_METRICS dismissed_stale=${count}`);
   return count;
