@@ -1,12 +1,12 @@
 {
   "name": "@human0/code-review",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "private": true,
   "type": "module",
   "description": "An autonomous AI reviewer for pull requests, as a GitHub Action.",
   "license": "Apache-2.0",
   "scripts": {
     "test": "node --test",
-    "lint": "node --check run.mjs && node --check scope.mjs && node --check scope.test.mjs"
+    "lint": "node --check run.mjs && node --check scope.mjs && node --check scope.test.mjs && node --check reviews.mjs && node --check reviews.test.mjs"
   }
 }
