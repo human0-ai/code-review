@@ -10,6 +10,7 @@ import {
   partitionComments,
   foldIntoBody,
 } from "./scope.mjs";
+import { staleBlockingReviews, blockingReviewsToClear } from "./reviews.mjs";
 
 const REPO = requireEnv("REPO");
 const PR_NUMBER = requireEnv("PR_NUMBER");
@@ -19,6 +20,10 @@ const REVIEW_FILE = "/tmp/review.json";
 
 // Inline cap — overflow is folded into the review body.
 const MAX_INLINE_COMMENTS = 8;
+
+// The identity reviews are submitted under when the action runs on the
+// workflow token.
+const BOT_LOGIN = process.env.BOT_LOGIN?.trim() || "github-actions[bot]";
 
 function requireEnv(name) {
   const value = process.env[name];
@@ -66,6 +71,56 @@ function ghSpawn(argv) {
     throw new Error(result.stderr?.trim() || `gh exited ${result.status}`);
   }
   return result.stdout.trim();
+}
+
+/**
+ * Drop the bot's stale CHANGES_REQUESTED reviews.
+ *
+ * `dismiss` needs pull-requests:write, which the action already requires to
+ * submit reviews at all. Failures log and continue: a PR left blocked is worse
+ * than the current behaviour, but it is not worth losing the review over.
+ * Returns the number actually dismissed.
+ */
+function dismissReviews(list, message) {
+  let dismissed = 0;
+  for (const review of list) {
+    try {
+      ghSpawn([
+        "api",
+        "--method",
+        "PUT",
+        `repos/${REPO}/pulls/${PR_NUMBER}/reviews/${review.id}/dismissals`,
+        "-f",
+        `message=${message}`,
+        "-f",
+        "event=DISMISS",
+      ]);
+      dismissed += 1;
+      console.log(
+        `Dismissed stale ${review.state} review ${review.id} (against ${(review.commit_id || "?").slice(0, 7)}).`,
+      );
+    } catch (e) {
+      console.log(
+        `Failed to dismiss review ${review.id}: ${e.message.split("\n")[0]}`,
+      );
+    }
+  }
+  return dismissed;
+}
+
+/** Dismiss objections the bot left against an older head. */
+function dismissStaleObjections() {
+  const stale = staleBlockingReviews(reviewObjects, {
+    headSha: HEAD_SHA,
+    botLogin: BOT_LOGIN,
+  });
+  if (!stale.length) return 0;
+  const count = dismissReviews(
+    stale,
+    `Superseded: this review was submitted against ${(stale[0].commit_id || "an earlier commit").slice(0, 7)}, and the PR head is now ${HEAD_SHA.slice(0, 7)}. Dismissing it so it can't block a head it never looked at; the review for the current head stands on its own.`,
+  );
+  console.log(`REVIEW_METRICS dismissed_stale=${count}`);
+  return count;
 }
 
 // argv-style git invocation — paths from `git diff --name-only` can contain
@@ -346,7 +401,11 @@ const fileChurnNote = changedFileList.length > 10
 // "### Previous reviews" string for the prompt and (b) inspect state +
 // commit_id to detect post-approval incremental mode below.
 const reviewsRaw = ghSafe(
-  `api "repos/${REPO}/pulls/${PR_NUMBER}/reviews" --jq '[.[] | {user: .user.login, state: .state, body: .body, commit_id: .commit_id, submitted_at: .submitted_at}]'`,
+  // --paginate --slurp: a long-lived PR easily passes 30 reviews, and the
+  // review that matters (the standing CHANGES_REQUESTED, or the last approval)
+  // is on the last page. `flatten` collapses the per-page arrays --slurp
+  // returns and is a no-op on a single page.
+  `api "repos/${REPO}/pulls/${PR_NUMBER}/reviews" --paginate --slurp --jq 'flatten | [.[] | {id: .id, user: .user.login, state: .state, body: .body, commit_id: .commit_id, submitted_at: .submitted_at}]'`,
 );
 let reviewObjects = [];
 try {
@@ -358,13 +417,21 @@ const reviews = reviewObjects
   .map((r) => `[${r.user || "?"}] ${r.state}: ${r.body || "(no body)"}`)
   .join("\n");
 
+// Dismiss the bot's own objections against heads that no longer exist. GitHub
+// counts only a reviewer's most recent review, so a CHANGES_REQUESTED left
+// several rebases ago keeps a PR `blocked` however clean its current head is,
+// and nothing the author does clears it. This runs before every exit path
+// below, including the skips, because a skipped run is exactly the case where
+// no newer review arrives to supersede it.
+dismissStaleObjections();
+
 // Detect post-approval incremental mode. GitHub returns reviews in
 // chronological order (oldest first). state==="APPROVED" only matches
 // still-active approvals — GitHub flips dismissed ones to "DISMISSED"
 // when new commits land (with branch protection's dismiss-stale setting),
 // so we automatically fall back to full mode after a dismissal.
 const botApprovals = reviewObjects.filter(
-  (r) => r.user === "github-actions[bot]" && r.state === "APPROVED",
+  (r) => r.user === BOT_LOGIN && r.state === "APPROVED",
 );
 const lastBotApproval = botApprovals.length
   ? botApprovals[botApprovals.length - 1]
@@ -535,10 +602,46 @@ if (folded.length) {
 writeFileSync(REVIEW_FILE, JSON.stringify(reviewPayload));
 
 // Submit the review — pipeline handles this to guarantee it's always posted
-gh(
+const submitted = gh(
   `api "repos/${REPO}/pulls/${PR_NUMBER}/reviews" --method POST --input ${REVIEW_FILE}`,
 );
 console.log("Review submitted");
+
+let submittedReviewId = null;
+try {
+  const parsed = JSON.parse(submitted);
+  submittedReviewId = typeof parsed?.id === "number" ? parsed.id : null;
+  if (verdict === "APPROVE" && parsed?.state && parsed.state !== "APPROVED") {
+    // Loud, because it is the failure this whole path exists to prevent: a
+    // clean PR that stays blocked because the approval landed as a comment.
+    console.log(
+      `WARNING: APPROVE verdict was recorded as "${parsed.state}" — the PR will stay blocked. ` +
+        "A workflow token cannot approve a PR it authored; run the action under an app or PAT identity for those.",
+    );
+  }
+} catch {
+  // Non-JSON output (older gh, or an empty body) — nothing to read, and the
+  // review itself went through.
+}
+
+// An APPROVE has to clear the bot's own standing objections, or GitHub keeps
+// the PR blocked on a review the bot itself no longer stands behind. Stale
+// ones went at the top of the run; this catches an objection left against
+// *this same head* by an earlier run whose findings are now addressed or
+// withdrawn.
+if (verdict === "APPROVE") {
+  const standing = blockingReviewsToClear(reviewObjects, {
+    botLogin: BOT_LOGIN,
+    keepReviewId: submittedReviewId,
+  });
+  const cleared = dismissReviews(
+    standing,
+    `Withdrawn: a later review of ${HEAD_SHA.slice(0, 7)} found nothing to change, so this objection no longer stands.`,
+  );
+  if (standing.length) {
+    console.log(`REVIEW_METRICS dismissed_on_approve=${cleared}`);
+  }
+}
 
 // Dispatch replies to existing threads. Failures log + continue so one bad
 // ID doesn't hide a successful review.

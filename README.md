@@ -34,6 +34,7 @@ Repo, BYO Key](https://human0.ai/blog/open-source-ai-code-review-github-action/)
 - **Feedback an agent can act on** — clear inline comments it reads, fixes, and re-submits against.
 - **Hands-free shipping** — an approval auto-merges. No one clicks the button.
 - **Reviews only what changed** — after approval, later pushes get a quick pass over the new commits.
+- **Never blocks on dead code** — an objection against a head that's been rebased away is dismissed on the next run, so a clean PR can't be held hostage by a review of code that no longer exists.
 - **Yours, end to end** — your account, open source, Apache 2.0. Bring your own key.
 
 ## Set it up
