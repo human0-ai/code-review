@@ -23,7 +23,7 @@ const MAX_INLINE_COMMENTS = 8;
 
 // The identity reviews are submitted under when the action runs on the
 // workflow token.
-const BOT_LOGIN = process.env.BOT_LOGIN?.trim() || "github-actions[bot]";
+const BOT_LOGIN = "github-actions[bot]";
 
 function requireEnv(name) {
   const value = process.env[name];
@@ -81,9 +81,12 @@ function ghSpawn(argv) {
  * than the current behaviour, but it is not worth losing the review over.
  * Returns the number actually dismissed.
  */
+const dismissedReviewIds = new Set();
+
 function dismissReviews(list, message) {
   let dismissed = 0;
   for (const review of list) {
+    if (dismissedReviewIds.has(review.id)) continue;
     try {
       ghSpawn([
         "api",
@@ -96,6 +99,7 @@ function dismissReviews(list, message) {
         "event=DISMISS",
       ]);
       dismissed += 1;
+      dismissedReviewIds.add(review.id);
       console.log(
         `Dismissed stale ${review.state} review ${review.id} (against ${(review.commit_id || "?").slice(0, 7)}).`,
       );
@@ -401,29 +405,31 @@ const fileChurnNote = changedFileList.length > 10
 // "### Previous reviews" string for the prompt and (b) inspect state +
 // commit_id to detect post-approval incremental mode below.
 const reviewsRaw = ghSafe(
-  // --paginate --slurp: a long-lived PR easily passes 30 reviews, and the
+  // --paginate --slurp: a long-lived PR easily passes one page of 30, and the
   // review that matters (the standing CHANGES_REQUESTED, or the last approval)
-  // is on the last page. `flatten` collapses the per-page arrays --slurp
-  // returns and is a no-op on a single page.
-  `api "repos/${REPO}/pulls/${PR_NUMBER}/reviews" --paginate --slurp --jq 'flatten | [.[] | {id: .id, user: .user.login, state: .state, body: .body, commit_id: .commit_id, submitted_at: .submitted_at}]'`,
+  // is on the last page. No --jq here — gh rejects it alongside --slurp — so
+  // the pages are flattened and shaped in JS below.
+  `api "repos/${REPO}/pulls/${PR_NUMBER}/reviews?per_page=100" --paginate --slurp`,
 );
 let reviewObjects = [];
 try {
-  reviewObjects = JSON.parse(reviewsRaw || "[]");
+  const pages = JSON.parse(reviewsRaw || "[]");
+  reviewObjects = (Array.isArray(pages) ? pages.flat() : [])
+    .filter((r) => r && typeof r === "object")
+    .map((r) => ({
+      id: r.id,
+      user: r.user?.login,
+      state: r.state,
+      body: r.body,
+      commit_id: r.commit_id,
+      submitted_at: r.submitted_at,
+    }));
 } catch {
   reviewObjects = [];
 }
 const reviews = reviewObjects
   .map((r) => `[${r.user || "?"}] ${r.state}: ${r.body || "(no body)"}`)
   .join("\n");
-
-// Dismiss the bot's own objections against heads that no longer exist. GitHub
-// counts only a reviewer's most recent review, so a CHANGES_REQUESTED left
-// several rebases ago keeps a PR `blocked` however clean its current head is,
-// and nothing the author does clears it. This runs before every exit path
-// below, including the skips, because a skipped run is exactly the case where
-// no newer review arrives to supersede it.
-dismissStaleObjections();
 
 // Detect post-approval incremental mode. GitHub returns reviews in
 // chronological order (oldest first). state==="APPROVED" only matches
@@ -445,6 +451,9 @@ if (sameShaAsApproval) {
   console.log(
     `Skipping review: bot already approved HEAD ${HEAD_SHA.slice(0, 7)} in review submitted at ${lastBotApproval.submitted_at}.`,
   );
+  // Nothing newer is coming from this run, so clear the bot's stale
+  // objections here or they keep blocking a head the bot has approved.
+  dismissStaleObjections();
   console.log(`REVIEW_METRICS mode=skip-same-sha verdict=APPROVE`);
   process.exit(0);
 }
@@ -473,6 +482,7 @@ if (lastBotApproval && lastBotApproval.commit_id) {
     console.log(
       `Skipping review: HEAD ${HEAD_SHA.slice(0, 7)} is tree-identical to approved ${lastBotApproval.commit_id.slice(0, 7)}.`,
     );
+    dismissStaleObjections();
     console.log(`REVIEW_METRICS mode=skip-tree-identical verdict=APPROVE`);
     process.exit(0);
   }
@@ -624,16 +634,23 @@ try {
   // review itself went through.
 }
 
-// An APPROVE has to clear the bot's own standing objections, or GitHub keeps
-// the PR blocked on a review the bot itself no longer stands behind. Stale
-// ones went at the top of the run; this catches an objection left against
-// *this same head* by an earlier run whose findings are now addressed or
-// withdrawn.
+// Only now, with this run's verdict on the record, drop the bot's objections
+// against heads that no longer exist. Doing it earlier would leave a window
+// where the PR reads unblocked but unreviewed, and auto-merge could land the
+// new head before the verdict arrives.
+dismissStaleObjections();
+
+// An APPROVE also has to clear objections against *this same head* — left by
+// an earlier run whose findings are now addressed or withdrawn — or GitHub
+// keeps the PR blocked on a review the bot itself no longer stands behind.
 if (verdict === "APPROVE") {
+  // `reviewObjects` is the pre-run snapshot, so anything already dismissed
+  // above is filtered out by `dismissReviews` itself — re-sending those would
+  // 422 and undercount.
   const standing = blockingReviewsToClear(reviewObjects, {
     botLogin: BOT_LOGIN,
     keepReviewId: submittedReviewId,
-  });
+  }).filter((r) => !dismissedReviewIds.has(r.id));
   const cleared = dismissReviews(
     standing,
     `Withdrawn: a later review of ${HEAD_SHA.slice(0, 7)} found nothing to change, so this objection no longer stands.`,

@@ -18,11 +18,8 @@ const BLOCKING_STATE = "CHANGES_REQUESTED";
  * one being reviewed now. A review on the *current* head is left alone: it is
  * a live objection about the code as it stands, and dismissing it would be
  * the bot overruling itself.
- *
- * `keepReviewId` lets the caller spare a review it just submitted (its own
- * id), so an approval that supersedes older objections never dismisses itself.
  */
-export function staleBlockingReviews(reviews, { headSha, botLogin, keepReviewId } = {}) {
+export function staleBlockingReviews(reviews, { headSha, botLogin } = {}) {
   if (!Array.isArray(reviews) || !headSha || !botLogin) return [];
   return reviews.filter(
     (r) =>
@@ -30,7 +27,6 @@ export function staleBlockingReviews(reviews, { headSha, botLogin, keepReviewId 
       r.user === botLogin &&
       r.state === BLOCKING_STATE &&
       typeof r.id === "number" &&
-      r.id !== keepReviewId &&
       r.commit_id !== headSha,
   );
 }
